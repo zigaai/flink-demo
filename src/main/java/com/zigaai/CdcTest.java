@@ -45,7 +45,7 @@ public class CdcTest {
 						WatermarkStrategy.noWatermarks(),
 						"MysqlSource");
 
-		// mysqlDS.print();
+		mysqlDS.print();
 
 		env.execute("Print MySQL Snapshot + Binlog");
 	}
