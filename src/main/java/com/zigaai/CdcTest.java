@@ -1,6 +1,7 @@
 package com.zigaai;
 
 import com.ververica.cdc.connectors.mysql.source.MySqlSource;
+import com.ververica.cdc.connectors.mysql.table.StartupOptions;
 import com.ververica.cdc.debezium.JsonDebeziumDeserializationSchema;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
@@ -10,7 +11,7 @@ import java.util.Properties;
 
 public class CdcTest {
 	public static void main(String[] args) throws Exception {
-
+		System.out.println("===================================== CDC 开始 =====================================");
 		Properties properties = new Properties();
 		properties.setProperty("decimal.handling.mode","string");
 
@@ -25,13 +26,14 @@ public class CdcTest {
 				.scanNewlyAddedTableEnabled(true)
 				.debeziumProperties(properties)
 				.deserializer(new JsonDebeziumDeserializationSchema()) // 将 SourceRecord 转换为 JSON 字符串
-				// .startupOptions(StartupOptions.timestamp(1701577788000L))
+				.startupOptions(StartupOptions.timestamp(1707114200000L))
 				.build();
 
 		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
 		// 设置 3s 的 checkpoint 间隔
 		env.enableCheckpointing(3000);
+		System.out.println("===================================== CDC checkpoint =====================================");
 
 		env
 				.fromSource(mySqlSource, WatermarkStrategy.noWatermarks(), "MySQL Source")
@@ -46,6 +48,7 @@ public class CdcTest {
 						"MysqlSource");
 
 		mysqlDS.print();
+		System.out.println("===================================== CDC 打印 =====================================");
 
 		env.execute("Print MySQL Snapshot + Binlog");
 	}
