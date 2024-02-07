@@ -38,7 +38,7 @@ public class CdcTest {
 		env
 				.fromSource(mySqlSource, WatermarkStrategy.noWatermarks(), "MySQL Source")
 				// 设置 source 节点的并行度为 4
-				.setParallelism(4)
+				.setParallelism(1)
 				.print("==>").setParallelism(1); // 设置 sink 节点并行度为 1
 
 		DataStreamSource<String> mysqlDS =
