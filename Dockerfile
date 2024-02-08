@@ -1,5 +1,5 @@
 # # FROM openjdk:17-alpine
-FROM registry.cn-hongkong.aliyuncs.com/zigaai/flink:1.17.2-java8
+FROM registry.cn-hongkong.aliyuncs.com/zigaai/flink:1.17.2
 WORKDIR /opt/flink
 #ARG JAR_FILE=target/*.jar
 ARG JAR_FILE=target/FlinkCDCTest-1.0-SNAPSHOT.jar
