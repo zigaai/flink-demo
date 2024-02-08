@@ -4,16 +4,10 @@ import com.ververica.cdc.connectors.mysql.source.MySqlSource;
 import com.ververica.cdc.connectors.mysql.table.StartupOptions;
 import com.ververica.cdc.debezium.JsonDebeziumDeserializationSchema;
 import com.zigaai.config.PropertiesConstant;
-import org.apache.commons.io.IOUtils;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
-import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
 import java.util.Properties;
 
 public class CdcTest {
@@ -31,7 +25,7 @@ public class CdcTest {
                 .setParallelism(Integer.parseInt(flinkProperties.getProperty("source.parallelism", "1")))
                 .addSink(new SinkFunction<String>() {
                     @Override
-                    public void invoke(String value, Context context) throws Exception {
+                    public void invoke(String value, Context context) {
                         System.out.println("sink fun: " + value);
                     }
                 })
