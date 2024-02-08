@@ -1,12 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flink-cdc-cm
+data:
+  config.properties: |
+    mysql.hostname=192.168.100.100
+    mysql.port=3306
+    mysql.database=foo
+    mysql.tables=foo.user
+    mysql.username=root
+    mysql.password=741852963mysql
+    mysql.serverTimeZone=UTC
+    mysql.scanNewlyAddedTableEnabled=true
+    startup.options.timestamp=1707363647000
+  debezium.properties: |
+    decimal.handling.mode=string
+  flink.properties: |
+    env.enableCheckpointing=3000
+    source.parallelism=2
+    sink.parallelism=1
+    sourceName=MySQL Source
+    jobName=Print MySQL Snapshot + Binlog
+---
 apiVersion: flink.apache.org/v1beta1
 kind: FlinkDeployment
 metadata:
-  name: basic-example
+  name: flink-cdc-demo
 spec:
-  image: flink:1.17
+  image: registry.cn-hongkong.aliyuncs.com/zigaai/demo:flink
   flinkVersion: v1_17
   flinkConfiguration:
-    taskmanager.numberOfTaskSlots: "2"
+    taskmanager.numberOfTaskSlots: "1"
   serviceAccount: flink
   jobManager:
     resource:
@@ -18,5 +42,27 @@ spec:
       cpu: 1
   job:
     jarURI: local:///opt/flink/app.jar
-    parallelism: 2
+    entryClass: com.zigaai.CdcTest
+    parallelism: 1
     upgradeMode: stateless
+  podTemplate:
+    spec:
+      containers:
+        - name: flink-main-container
+          volumeMounts:
+            - mountPath: /opt/flink/config/flink.properties
+              name: flink-volume
+              subPath: flink.properties
+              readOnly: true
+            - mountPath: /opt/flink/config/config.properties
+              name: flink-volume
+              subPath: config.properties
+              readOnly: true
+            - mountPath: /opt/flink/config/debezium.properties
+              name: flink-volume
+              subPath: debezium.properties
+              readOnly: true
+      volumes:
+        - name: flink-volume
+          configMap:
+            name: flink-cdc-cm

@@ -22,17 +22,17 @@ public class CdcTest {
         env
                 .fromSource(mySqlSource, WatermarkStrategy.noWatermarks(), flinkProperties.getProperty("sourceName", "MySQL Source"))
                 // 设置 source 节点的并行度为 4
-                .setParallelism(Integer.parseInt(flinkProperties.getProperty("source.parallelism", "1")))
+                // .setParallelism(Integer.parseInt(flinkProperties.getProperty("source.parallelism", "1")))
                 .addSink(new SinkFunction<String>() {
                     @Override
                     public void invoke(String value, Context context) {
                         System.out.println("sink fun: " + value);
                     }
-                })
+                });
                 // 设置 sink 节点并行度为 1
-                .setParallelism(Integer.parseInt(flinkProperties.getProperty("sink.parallelism", "1")));
+                // .setParallelism(Integer.parseInt(flinkProperties.getProperty("sink.parallelism", "1")));
 
-        env.execute(flinkProperties.getProperty("jobName", "Print MySQL Snapshot + Binlog"));
+        env.execute(flinkProperties.getProperty("jobName", "MySQL Sync"));
     }
 
     private static MySqlSource<String> getMySqlSource() {
