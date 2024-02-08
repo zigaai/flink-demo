@@ -98,11 +98,6 @@
 			<artifactId>debezium-connector-mysql</artifactId>
 			<version>${debezium.version}</version>
 		</dependency>
-		<dependency>
-			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-connector-base</artifactId>
-			<version>${flink.version}</version>
-		</dependency>
 	</dependencies>
 
 	<build>

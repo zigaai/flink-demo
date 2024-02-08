@@ -3,53 +3,63 @@ package com.zigaai;
 import com.ververica.cdc.connectors.mysql.source.MySqlSource;
 import com.ververica.cdc.connectors.mysql.table.StartupOptions;
 import com.ververica.cdc.debezium.JsonDebeziumDeserializationSchema;
+import com.zigaai.config.PropertiesConstant;
+import org.apache.commons.io.IOUtils;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.Properties;
 
 public class CdcTest {
-	public static void main(String[] args) throws Exception {
-		System.out.println("===================================== CDC 开始 =====================================");
-		Properties properties = new Properties();
-		properties.setProperty("decimal.handling.mode","string");
+    public static void main(String[] args) throws Exception {
+        Properties flinkProperties = PropertiesConstant.getFlinkProperties();
+        MySqlSource<String> mySqlSource = getMySqlSource();
 
-		MySqlSource<String> mySqlSource = MySqlSource.<String>builder()
-				.hostname("192.168.100.100")
-				.port(3306)
-				.databaseList("foo") // 设置捕获的数据库， 如果需要同步整个数据库，请将 tableList 设置为 ".*".
-				.tableList("foo.user") // 设置捕获的表
-				.username("root")
-				.password("741852963mysql")
-				.serverTimeZone("UTC")
-				.scanNewlyAddedTableEnabled(true)
-				.debeziumProperties(properties)
-				.deserializer(new JsonDebeziumDeserializationSchema()) // 将 SourceRecord 转换为 JSON 字符串
-				.startupOptions(StartupOptions.timestamp(1707114200000L))
-				.build();
+        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
-		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        // 设置 3s 的 checkpoint 间隔
+        env.enableCheckpointing(Long.parseLong(flinkProperties.getProperty("env.enableCheckpointing", "3000")));
+        env
+                .fromSource(mySqlSource, WatermarkStrategy.noWatermarks(), flinkProperties.getProperty("sourceName", "MySQL Source"))
+                // 设置 source 节点的并行度为 4
+                .setParallelism(Integer.parseInt(flinkProperties.getProperty("source.parallelism", "1")))
+                .addSink(new SinkFunction<String>() {
+                    @Override
+                    public void invoke(String value, Context context) throws Exception {
+                        System.out.println("sink fun: " + value);
+                    }
+                })
+                // 设置 sink 节点并行度为 1
+                .setParallelism(Integer.parseInt(flinkProperties.getProperty("sink.parallelism", "1")));
 
-		// 设置 3s 的 checkpoint 间隔
-		env.enableCheckpointing(3000);
-		System.out.println("===================================== CDC checkpoint =====================================");
+        env.execute(flinkProperties.getProperty("jobName", "Print MySQL Snapshot + Binlog"));
+    }
 
-		env
-				.fromSource(mySqlSource, WatermarkStrategy.noWatermarks(), "MySQL Source")
-				// 设置 source 节点的并行度为 4
-				.setParallelism(1)
-				.print("==>").setParallelism(1); // 设置 sink 节点并行度为 1
-
-		DataStreamSource<String> mysqlDS =
-				env.fromSource(
-						mySqlSource,
-						WatermarkStrategy.noWatermarks(),
-						"MysqlSource");
-
-		mysqlDS.print();
-		System.out.println("===================================== CDC 打印 =====================================");
-
-		env.execute("Print MySQL Snapshot + Binlog");
-	}
+    private static MySqlSource<String> getMySqlSource() {
+        Properties configProperties = PropertiesConstant.getConfigProperties();
+        Properties debeziumProperties = PropertiesConstant.getDebeziumProperties();
+        return MySqlSource.<String>builder()
+                .hostname(configProperties.getProperty("mysql.hostname"))
+                .port(Integer.parseInt(configProperties.getProperty("mysql.port", "3306")))
+                .databaseList(configProperties.getProperty("mysql.database").split(",")) // 设置捕获的数据库， 如果需要同步整个数据库，请将 tableList 设置为 ".*".
+                .tableList(configProperties.getProperty("mysql.tables").split(",")) // 设置捕获的表
+                .username(configProperties.getProperty("mysql.username"))
+                .password(configProperties.getProperty("mysql.password"))
+                .serverTimeZone(configProperties.getProperty("mysql.serverTimeZone", "UTC"))
+                .scanNewlyAddedTableEnabled(Boolean.getBoolean(configProperties.getProperty("mysql.scanNewlyAddedTableEnabled", "false")))
+                .debeziumProperties(debeziumProperties)
+                .deserializer(new JsonDebeziumDeserializationSchema()) // 将 SourceRecord 转换为 JSON 字符串
+                .startupOptions(
+                        StartupOptions.timestamp(
+                                Long.parseLong(configProperties.getProperty("startup.options.timestamp", String.valueOf(System.currentTimeMillis())))
+                        )
+                )
+                .build();
+    }
 }
