@@ -39,7 +39,7 @@ public class CdcTest {
         Properties configProperties = PropertiesConstant.getConfigProperties();
         Properties debeziumProperties = PropertiesConstant.getDebeziumProperties();
         return MySqlSource.<String>builder()
-                .hostname(configProperties.getProperty("mysql.hostname"))
+                .hostname(configProperties.getProperty("mysql.hostname", "192.168.100.100"))
                 .port(Integer.parseInt(configProperties.getProperty("mysql.port", "3306")))
                 .databaseList(configProperties.getProperty("mysql.database").split(",")) // 设置捕获的数据库， 如果需要同步整个数据库，请将 tableList 设置为 ".*".
                 .tableList(configProperties.getProperty("mysql.tables").split(",")) // 设置捕获的表
